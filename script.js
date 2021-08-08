@@ -1,243 +1,286 @@
 'use strict';
 
-///////////////////////////////////////
-// Modal window
+// prettier-ignore
 
-const modal = document.querySelector('.modal');
-const overlay = document.querySelector('.overlay');
-const btnCloseModal = document.querySelector('.btn--close-modal');
-const btnsOpenModal = document.querySelectorAll('.btn--show-modal');
+const form = document.querySelector('.form');
+const containerWorkouts = document.querySelector('.workouts');
+const inputType = document.querySelector('.form__input--type');
+const inputDistance = document.querySelector('.form__input--distance');
+const inputDuration = document.querySelector('.form__input--duration');
+const inputCadence = document.querySelector('.form__input--cadence');
+const inputElevation = document.querySelector('.form__input--elevation');
 
-const openModal = function (e) {
-  e.preventDefault();
-  modal.classList.remove('hidden');
-  overlay.classList.remove('hidden');
-};
-
-const closeModal = function () {
-  modal.classList.add('hidden');
-  overlay.classList.add('hidden');
-};
-
-btnsOpenModal.forEach(btn => btn.addEventListener('click', openModal));
-
-btnCloseModal.addEventListener('click', closeModal);
-overlay.addEventListener('click', closeModal);
-
-document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
-    closeModal();
+class Workout {
+  date = new Date();
+  id = (Date.now() + '').slice(-10);
+  clicks = 0;
+  constructor(coords, distance, duration) {
+    this.coords = coords;
+    this.distance = distance;
+    this.duration = duration;
   }
-});
-
-
-
-const message = document.createElement('div');
-message.classList.add('cookie-message');
-const header = document.querySelector('.header');
-message.textContent = 'We use cookies for better performance';
-message.innerHTML =
-  'We use cookies for better performance <button class="btn btn--close-cookie">Got it!</button>';
-header.append(message);
-
-document
-  .querySelector('.btn--close-cookie')
-  .addEventListener('click', function () {
-    message.remove();
-  });
-
-const buttonScroll = document.querySelector('.btn--scroll-to');
-const section1 = document.querySelector('#section--1');
-buttonScroll.addEventListener('click', function (e) {
-  
-
-  section1.scrollIntoView({ behavior: 'smooth' });
-});
-const alerth = function (e) {
-  alert("That's Great!!!");
-};
-
-
-document.querySelector('.nav__links').addEventListener('click', function (e) {
-  e.preventDefault();
-  //console.log(e.target);
-  if (e.target.classList.contains('nav__link')) {
-    const id = e.target.getAttribute('href');
-    document.querySelector(id).scrollIntoView({ behavior: 'smooth' });
+  _setDescription() {
+    //prettier - ignore;
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    this.description = `${this.type[0].toUpperCase()}${this.type.slice(1)} on
+     ${months[this.date.getMonth()]} ${this.date.getDay()}`;
   }
-});
-const h1 = document.querySelector('h1');
-console.log(h1.querySelectorAll('.highlight'));
-h1.firstElementChild.style.color = 'white';
-
-const tabs = document.querySelectorAll('.operations__tab');
-const tabContainer = document.querySelector('.operations__tab-container');
-const tabContent = document.querySelectorAll('.operations__content');
-
-//tabs.forEach(t => t.addEventListener('click', () => console.log('click')));
-tabContainer.addEventListener('click', function (e) {
-  const clicked = e.target.closest('.operations__tab');
-
-  if (!clicked) return;
-  tabs.forEach(t => t.classList.remove('operations__tab--active'));
-  clicked.classList.add('operations__tab--active');
-  tabContent.forEach(c => c.classList.remove('operations__content--active'));
-
-  document
-    .querySelector(`.operations__content--${clicked.dataset.tab}`)
-    .classList.add('operations__content--active');
-});
-
-const nav = document.querySelector('.nav');
-
-const handlerOver = function (e) {
-  if (e.target.classList.contains('nav__link')) {
-    const link = e.target;
-    const siblings = link.closest('.nav').querySelectorAll('.nav__link');
-    const logo = link.closest('.nav').querySelector('img');
-    siblings.forEach(el => {
-      if (el !== link) el.style.opacity = this;
-    });
-    logo.style.opacity = this;
+  click() {
+    this.clicks++;
   }
-};
+}
+class Running extends Workout {
+  type = 'running';
+  constructor(coords, distance, duration, Cadence) {
+    super(coords, distance, duration);
+    this.Cadence = Cadence;
+    this.calPace();
+    this._setDescription();
+  }
+  calPace() {
+    this.pace = this.duration / this.distance;
+    return this.pace;
+  }
+}
+class Cycling extends Workout {
+  type = 'cycling';
+  constructor(coords, distance, duration, Elevation) {
+    super(coords, distance, duration);
+    this.Elevation = Elevation;
+    this.calSpeed();
+    this._setDescription();
+  }
+  calSpeed() {
+    this.speed = this.distance / (this.duration / 60);
+    return this.speed;
+  }
+}
+const run1 = new Running([34, -45], 25, 5, 10);
+const cycle1 = new Cycling([56, 61], 40, 20, 15);
 
-nav.addEventListener('mouseover', handlerOver.bind(0.5));
+console.log(run1);
+console.log(cycle1);
 
-nav.addEventListener('mouseout', handlerOver.bind(1));
+///////////////////////////////////////////////////////////////////////////////////////////////////
+class App {
+  #map;
+  #mapZoom = 13;
+  #mapEvent;
+  #workouts = [];
+  constructor() {
+    this._getPosition();
+    this._getLocalStorage();
+    form.addEventListener('submit', this._newWorkout.bind(this));
+    inputType.addEventListener('change', this._toggleElevationField);
+    containerWorkouts.addEventListener('click', this._moveToPopUp.bind(this));
+  }
 
-const initialCords = section1.getBoundingClientRect();
-console.log(window.scrollY);
-
-
-const navHeight = nav.getBoundingClientRect().height;
-
-const stickynav = function (enteries) {
-  const [entry] = enteries;
-
-  if (!entry.isIntersecting) nav.classList.add('sticky');
-  else nav.classList.remove('sticky');
-};
-const headerObserver = new IntersectionObserver(stickynav, {
-  root: null,
-  threshold: 0,
-  rootMargin: `-${navHeight}px`,
-});
-headerObserver.observe(header);
-
-const allSection = document.querySelectorAll('.section');
-const revealSection = function (enteries, observer) {
-  const [entry] = enteries;
-
-  if (!entry.isIntersecting) return;
-  entry.target.classList.remove('section--hidden');
-};
-
-const sectionObserver = new IntersectionObserver(revealSection, {
-  root: null,
-  threshold: 0.15,
-});
-
-allSection.forEach(function (section) {
-  sectionObserver.observe(section);
-  section.classList.add('section--hidden');
-});
-
-const imgTargets = document.querySelectorAll('img[data-src]');
-
-const loadingImg = function (enteries, observer) {
-  const [entry] = enteries;
-
-  if (!entry.isIntersecting) return;
-  entry.target.src = entry.target.dataset.src;
-  entry.target.addEventListener('load', function () {
-    entry.target.classList.remove('lazy-img');
-  });
-  observer.unobserve(entry.target);
-};
-const imgObserver = new IntersectionObserver(loadingImg, {
-  root: null,
-  threshold: 0,
-  rootMargin: '200px',
-});
-
-imgTargets.forEach(img => imgObserver.observe(img));
-let curSlide = 0;
-const sliders = function () {
-  const slides = document.querySelectorAll('.slide');
-  const slider = document.querySelector('.slider');
-  const btnLeft = document.querySelector('.slider__btn--left');
-  const btnRight = document.querySelector('.slider__btn--right');
-  const dotsContainer = document.querySelector('.dots');
-  //slider.style.transform = 'scale(0.4) translateX(-1200px)';
-  //slider.style.overflow = 'visible';
-  const maxSlide = slides.length;
-  const createdDots = function () {
-    slides.forEach(function (_, i) {
-      dotsContainer.insertAdjacentHTML(
-        'beforeend',
-        `<button class="dots__dot" data-slide="${i}"></button>`
+  _getPosition() {
+    if (navigator.geolocation)
+      navigator.geolocation.getCurrentPosition(
+        this._loadMap.bind(this),
+        function () {
+          alert("couldn't found the location");
+        }
       );
+  }
+
+  _loadMap(position) {
+    const { latitude } = position.coords;
+    const { longitude } = position.coords;
+    console.log(`https://www.google.co.in/maps/@${latitude},${longitude}`);
+    const coords = [latitude, longitude];
+    this.#map = L.map('map').setView(coords, this.#mapZoom);
+    console.log(map);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.fr/hot//{z}/{x}/{y}.png', {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(this.#map);
+
+    this.#map.on('click', this._showForm.bind(this));
+
+    this.#workouts.forEach(work => {
+      this._renderWorkoutMarker(work);
     });
-  };
+  }
 
-  const activateDots = function (slide) {
-    document
-      .querySelectorAll('.dots__dot')
-      .forEach(dot => dot.classList.remove('dots__dot--active'));
+  _showForm(mapE) {
+    this.#mapEvent = mapE;
+    form.classList.remove('hidden');
+    inputDistance.focus();
+  }
+  _hideform() {
+    inputDistance.value =
+      inputDuration.value =
+      inputCadence.value =
+      inputElevation.value =
+        '';
+    form.style.display = 'none';
+    form.classList.add('hidden');
+    setTimeout(() => ((form.style.display = 'grid'), 1000));
+  }
 
-    document
-      .querySelector(`.dots__dot[data-slide="${slide}"]`)
-      .classList.add('dots__dot--active');
-  };
+  _toggleElevationField() {
+    inputElevation.closest('.form__row').classList.toggle('form__row--hidden');
+    inputCadence.closest('.form__row').classList.toggle('form__row--hidden');
+  }
 
-  const gotoSlide = function (slide) {
-    slides.forEach(
-      (s, i) => (s.style.transform = `translateX(${100 * (i - slide)}%)`)
+  _newWorkout(e) {
+    const validInputs = (...inputs) =>
+      inputs.every(inp => Number.isFinite(inp));
+    const allPositive = (...inputs) => inputs.every(inp => inp > 0);
+    e.preventDefault();
+    //Data from the form
+    const type = inputType.value;
+    const distance = +inputDistance.value;
+    const duration = +inputDuration.value;
+    const { lat, lng } = this.#mapEvent.latlng;
+    let workout;
+    //check if data is valid
+
+    //if workout is running, create running object
+    if (type === 'running') {
+      const cadence = +inputCadence.value;
+      if (
+        !validInputs(distance, duration, cadence) ||
+        !allPositive(distance, duration, cadence)
+      )
+        return alert('Please enter a positive number');
+      workout = new Running([lat, lng], distance, duration, cadence);
+    }
+    //if workout is cycling, create cycling object
+    if (type === 'cycling') {
+      const elevation = +inputElevation.value;
+      if (
+        !validInputs(distance, duration, elevation) ||
+        !allPositive(distance, duration)
+      )
+        return alert('Please enter a positive number');
+      workout = new Cycling([lat, lng], distance, duration, elevation);
+    }
+    //add new array to workout
+    this.#workouts.push(workout);
+    console.log(workout);
+    //render workout on map as marker
+    this._renderWorkout(workout);
+    //render workout on list
+    this._renderWorkoutMarker(workout);
+    //Hide the form and clear the input fields
+    this._hideform();
+    //to create the storage
+    this._setLocalStorage();
+  }
+  _renderWorkoutMarker(workout) {
+    L.marker(workout.coords)
+      .addTo(this.#map)
+      .bindPopup(
+        L.popup({
+          maxWidth: 250,
+          minWidth: 100,
+          autoClose: false,
+          closeOnClick: false,
+          className: `${workout.type}-popup`,
+        })
+      )
+      .setPopupContent(
+        `${workout.type === 'running' ? '🦶🏼' : '🚴‍♀️'} ${workout.description}`
+      )
+      .openPopup();
+  }
+  _renderWorkout(workout) {
+    let html = `
+      <li class="workout workout--${workout.type}" data-id="${workout.id}">
+          <h2 class="workout__title">${workout.description}</h2>
+          <div class="workout__details">
+            <span class="workout__icon">${
+              workout.type === 'running' ? '🦶🏼' : '🚴‍♀️'
+            } </span>
+            <span class="workout__value">${workout.distance}</span>
+            <span class="workout__unit">km</span>
+          </div>
+          <div class="workout__details">
+            <span class="workout__icon">⏱</span>
+            <span class="workout__value">${workout.duration}</span>
+            <span class="workout__unit">min</span>
+          </div>
+          `;
+    if (workout.type === 'running')
+      html += `
+        
+      <div class="workout__details">
+            <span class="workout__icon">⚡️</span>
+            <span class="workout__value">${workout.pace.toFixed(1)}</span>
+            <span class="workout__unit">km/h</span>
+         </div> 
+          <div class="workout__details">
+            <span class="workout__icon">⛰</span>
+            <span class="workout__value">${workout.cadence}</span>
+            <span class="workout__unit">m</span>
+          </div>
+          </li>
+          `;
+    if (workout.type === 'cycling')
+      html += `
+      <div class="workout__details">
+      <span class="workout__icon">⚡️</span>
+      <span class="workout__value">${workout.speed.toFixed(1)}</span>
+      <span class="workout__unit">km/h</span>
+    </div>
+    <div class="workout__details">
+      <span class="workout__icon">⛰</span>
+      <span class="workout__value">${workout.elevation}</span>
+      <span class="workout__unit">m</span>
+    </div>
+    </li>
+    `;
+    form.insertAdjacentHTML('afterend', html);
+  }
+  _moveToPopUp(e) {
+    const workoutEl = e.target.closest('.workout');
+    console.log(workoutEl);
+    if (!workoutEl) return;
+    const workout = this.#workouts.find(
+      work => work.id === workoutEl.dataset.id
     );
-  };
+    console.log(workout);
+    this.#map.setView(workout.coords, this.#mapZoom, {
+      animate: true,
+      pan: {
+        duration: 1,
+      },
+    });
+    workout.click();
+  }
+  _setLocalStorage() {
+    localStorage.setItem('workouts', JSON.stringify(this.#workouts));
+  }
+  _getLocalStorage() {
+    const data = JSON.parse(localStorage.getItem('workouts'));
+    console.log(data);
+    if (!data) return;
+    this.#workouts = data;
+    this.#workouts.forEach(work => {
+      this._renderWorkout(work);
+    });
+  }
+  reset() {
+    localStorage.removeItem('workouts');
+    location.reload();
+  }
+}
 
-  const nextSlide = function () {
-    if (curSlide === maxSlide - 1) {
-      curSlide = 0;
-    } else {
-      curSlide++;
-    }
-    gotoSlide(curSlide);
-    activateDots(curSlide);
-  };
-  const preSlide = function () {
-    if (curSlide === 0) {
-      curSlide = maxSlide - 1;
-    }
-    curSlide--;
-    gotoSlide(curSlide);
-    activateDots(curSlide);
-  };
-  const init = function () {
-    gotoSlide(0);
-    createdDots();
-    activateDots(0);
-  };
-  init();
-  btnRight.addEventListener('click', nextSlide);
-  btnLeft.addEventListener('click', preSlide);
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'ArrowLeft') preSlide();
-    e.key === 'ArrowRight' && nextSlide();
-  });
-  dotsContainer.addEventListener('click', function (e) {
-    if (e.target.classList.contains('dots__dot'));
-    const { slide } = e.target.dataset;
-    gotoSlide(slide);
-    activateDots(slide);
-  });
-};
-sliders();
-
-document.addEventListener('DOMContentLoaded', function (e) {
-  console.log('HTML parshed and DOM loaded', e);
-});
-window.addEventListener('load', function (e) {
-  console.log('Image load', e);
-});
+const app = new App();
